@@ -22,7 +22,7 @@ DEPENDS = " \
     jansson \
 "
 
-inherit gnomebase gettext systemd bluetooth bash-completion vala gobject-introspection
+inherit gnomebase gettext systemd bluetooth bash-completion vala gobject-introspection update-alternatives
 
 GI_DATA_ENABLED_libc-musl = "False"
 
@@ -131,6 +131,16 @@ FILES_${PN}-nmtui-doc = " \
 
 SYSTEMD_SERVICE_${PN} = "NetworkManager.service NetworkManager-dispatcher.service"
 
+ALTERNATIVE_PRIORITY = "100"
+ALTERNATIVE_${PN} = "${@bb.utils.contains('DISTRO_FEATURES','systemd','resolv-conf','',d)}"
+ALTERNATIVE_TARGET[resolv-conf] = "${@bb.utils.contains('DISTRO_FEATURES','systemd','${sysconfdir}/resolv-conf.NetworkManager','',d)}"
+ALTERNATIVE_LINK_NAME[resolv-conf] = "${@bb.utils.contains('DISTRO_FEATURES','systemd','${sysconfdir}/resolv.conf','',d)}"
+
 do_install_append() {
     rm -rf ${D}/run ${D}${localstatedir}/run
+
+    # For read-only filesystem, do not create links during bootup
+    if ${@bb.utils.contains('DISTRO_FEATURES','systemd','true','false',d)}; then
+        ln -sf ../run/NetworkManager/resolv.conf ${D}${sysconfdir}/resolv-conf.NetworkManager
+    fi
 }
