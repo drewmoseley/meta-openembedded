@@ -94,6 +94,8 @@ PACKAGECONFIG[gnutls] = "--with-crypto=gnutls,,gnutls"
 PACKAGECONFIG[wifi] = "--enable-wifi=yes,--enable-wifi=no,,wpa-supplicant"
 PACKAGECONFIG[ifupdown] = "--enable-ifupdown,--disable-ifupdown"
 PACKAGECONFIG[qt4-x11-free] = "--enable-qt,--disable-qt,qt4-x11-free"
+# Only used to create tmpfiles.d entries in do_install_append below
+PACKAGECONFIG[resolved] = ""
 
 PACKAGES =+ "libnmutil libnmglib libnmglib-vpn \
   ${PN}-nmtui ${PN}-nmtui-doc \
@@ -116,6 +118,7 @@ FILES_${PN} += " \
     ${noarch_base_libdir}/udev/* \
     ${systemd_unitdir}/system \
     ${libdir}/pppd \
+    ${exec_prefix}/lib/tmpfiles.d \
 "
 
 RRECOMMENDS_${PN} += "iptables \
@@ -151,8 +154,15 @@ ALTERNATIVE_LINK_NAME[resolv-conf] = "${@bb.utils.contains('DISTRO_FEATURES','sy
 do_install_append() {
     rm -rf ${D}/run ${D}${localstatedir}/run
 
-    # For read-only filesystem, do not create links during bootup
-    if ${@bb.utils.contains('DISTRO_FEATURES','systemd','true','false',d)}; then
-        ln -sf ../run/NetworkManager/resolv.conf ${D}${sysconfdir}/resolv-conf.NetworkManager
+    # Ensure tmp files are created on startup
+    if ${@bb.utils.contains('PACKAGECONFIG','resolved','true','false',d)}; then
+        install -d ${D}${exec_prefix}/lib/tmpfiles.d
+        echo 'd /run/NetworkManager/ 0755 root root -' >>${D}${exec_prefix}/lib/tmpfiles.d/${PN}.conf
+        echo 'f /run/NetworkManager/resolv.conf 0644 root root' >>${D}${exec_prefix}/lib/tmpfiles.d/${PN}.conf
+
+        # For read-only filesystem, do not create links during bootup
+        if ${@bb.utils.contains('DISTRO_FEATURES','systemd','true','false',d)}; then
+            ln -sf ../run/NetworkManager/resolv.conf ${D}${sysconfdir}/resolv-conf.NetworkManager
+        fi
     fi
 }
