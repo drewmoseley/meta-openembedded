@@ -15,4 +15,4 @@ SRC_URI[license.sha256sum] = "0a4f3b38055f50f047a42521568fa6ddb9a5976c2884f6ae13
 
 
 PYPI_PACKAGE = "backports_abc"
-inherit pypi setuptools
+inherit pypi setuptools3
